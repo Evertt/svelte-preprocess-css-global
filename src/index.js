@@ -53,6 +53,13 @@ module.exports = (context = {}) => async ({
     if (attributes.global) {
       result = await postcss([
         root => {
+          root.walkAtRules(/keyframes$/, atrule => {
+            const name = atrule.params;
+            if (name.indexOf("-global-") !== 0) {
+              atrule.params = "-global-" + name;
+            }
+          });
+
           root.walkRules(async rule => {
             const newSelectors = await parser(selectors => {
               // selectors.each((node) => {
@@ -60,7 +67,8 @@ module.exports = (context = {}) => async ({
                 const selector = container.toString();
 
                 // only override selectors which are not already global
-                if (selector.indexOf(":global") !== 0) {
+                // and don't mess with percentage selectors inside of keyframes
+                if (selector.indexOf(":global") !== 0 && selector.slice(-1) !== "%") {
                   // wrap the first part of the selector in a global pseudo element
                   const firstNode = container.first;
                   container.insertBefore(
